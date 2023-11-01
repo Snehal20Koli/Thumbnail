@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Thumbnail Generator</title>
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<form>
+		<label for="movies" id="inputlab">Choose video(s)</label>
+		<input type="file" id="movies" name="movies[]" accept="video/mp4,video/x-m4v,video/*" multiple>
+		<button type="button" id="generateThumbnailsButton">Regenerate</button>
+		<button type="button" id="clear">Clear</button>
+		<a href="http://127.0.0.1:5501/for.html">
+		<button type="button" id="title">Title</button>
+	</a>
+		<p class="title">Video to JPG Thumbnail Generator</p>
+	</form>
+	
+	<div id="thumbnails"></div>
+	<script>
+		let movies = [];
+		const generateThumbnail = (movie, index) => {
+		const video = document.createElement("video");
+		video.src = URL.createObjectURL(movie);
+		video.addEventListener('loadedmetadata', function() {
+			var duration = video.duration;
+			var randomTime = Math.floor(Math.random() * duration);
+			video.currentTime = randomTime;
+			const canvas = document.createElement("canvas");
+
+			this.addEventListener('seeked', function() {
+				canvas.width = video.videoWidth;
+				canvas.height = video.videoHeight;
+				const context = canvas.getContext("2d");
+				context.drawImage(video, 0, 0, canvas.width, canvas.height);
+				canvas.toBlob(function(blob) {
+					var thumbnail = $('<img class="thumbnail" data-index="' + index + '">');
+					thumbnail.attr('src', URL.createObjectURL(blob));
+					var title = movie.name;
+					var container = $('<div class="thumbnail-wrapper"></div>');
+					container.append(thumbnail);
+					container.append(title);
+
+					thumbnail.click(function() {
+						var link = document.createElement('a');
+						link.href = thumbnail.attr('src');
+						link.download = title.replace(/\.[^/.]+$/, "") + '.jpg';
+						document.body.appendChild(link);
+						link.click();
+						document.body.removeChild(link);
+						var currentIndex = parseInt(thumbnail.attr('data-index'));
+						$(this).parent().remove();
+						URL.revokeObjectURL(movie);
+						movies.splice(currentIndex, 1);
+						// Update the index value for the remaining thumbnails
+						$('.thumbnail').each(function() {
+							var currentIndex = parseInt($(this).attr('data-index'));
+							if (currentIndex > index) {
+								$(this).attr('data-index', currentIndex - 1);
+							}
+						});
+					});
+
+					$('#thumbnails').append(container);
+				}, 'image/jpeg', 1);
+			});
+		});
+	};
+
+	const renderThumbnails = () => {
+		document.getElementById("thumbnails").innerHTML = "";
+		movies.forEach((movie, index) => {
+			generateThumbnail(movie, index);
+		});
+	};
+
+	document.getElementById("movies").addEventListener('change', (event) => {
+		movies = Array.from(event.target.files);
+		renderThumbnails();
+	});
+
+	document.getElementById("generateThumbnailsButton").addEventListener('click', () => {
+		const newMovies = [];
+		movies.forEach((movie) => {
+			if (document.querySelector(`img[src="${URL.createObjectURL(movie)}"]`) === null) {
+				newMovies.push(movie);
+			}
+		});
+		movies = newMovies;
+		renderThumbnails();
+	});
+
+	document.getElementById("clear").addEventListener('click', function() {
+		document.getElementById("thumbnails").innerHTML = "";
+		document.getElementById("movies").value = "";
+		movies = [];
+	});
+</script>
+</body>
+</html>
+
+
+
+
+
